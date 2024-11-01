@@ -1,0 +1,210 @@
+#Finne antall records i 4 tidsserier
+library(dataresqc)
+library(tidyverse)
+
+setwd("C:/Users/elinl/Documents/HClim/Hclim/")
+# read ta("C:/Users/elinl/Documents/Homogenization/Analyze/")
+
+###########
+# instrumental from hclim
+input.hclim = 'C:/Users/elinl/Documents/HClim/Hclim'
+flist.hclim <- list.files(input.hclim, pattern='.tsv')
+head(flist.hclim)
+length(flist.hclim)
+
+
+# extract metadata and period
+library(dataresqc)
+
+meta.hclim <- data.frame(matrix(NA,1,5))
+colnames(meta.hclim) <- c('id', 'lat', 'lon', 'start', 'end')
+
+for(f in 1:length(flist.hclim)) {
+  
+  ifile.hclim <- paste0(input.hclim,'/',flist.hclim[f])
+  meta.hclim[f,1:3] <- read_meta(ifile.hclim)[c(2,4,5)]
+  
+  x <- read.csv(ifile.hclim, quote = "", skip=12, sep="\t", header=TRUE)
+  print(paste0("Reading: ", f))
+  meta.hclim[f,4] <- x$Year[1]
+  meta.hclim[f,5] <- x$Year[nrow(x)]
+}
+
+head(meta.hclim)
+
+###########
+#hom from hom folder
+input.hom = 'C:/Users/elinl/Documents/Hclim/Cli_Hom'
+#input.hom = '/scratch2/peter/elin/hom/'
+flist.hom <- list.files(input.hom, pattern='.tsv')
+head(flist.hom)
+length(flist.hom)
+
+meta.hom <- data.frame(matrix(NA,1,5))
+colnames(meta.hom) <- c('id', 'lat', 'lon', 'start', 'end')
+
+for(f in 1:length(flist.hom)) {
+  
+  ifile.hom <- paste0(input.hom,'/',flist.hom[f])
+  meta.hom[f,1:3] <- read_meta(ifile.hom)[c(2,4,5)]
+  
+  x <- read.csv(ifile.hom, quote = "", skip=12, sep="\t", header=TRUE)
+  print(paste0("Reading: ", f))
+  meta.hom[f,4] <- x$Year[1]
+  meta.hom[f,5] <- x$Year[nrow(x)]
+}
+
+head(meta.hom)
+
+## reading in the Data used in Bart
+input.homba = 'C:/Users/elinl/Documents/Hclim/Ba_Hom'
+#input.hom = '/scratch2/peter/elin/hom/'
+flist.homba <- list.files(input.homba, pattern='.tsv')
+head(flist.homba)
+length(flist.homba)
+
+meta.homba <- data.frame(matrix(NA,1,5))
+colnames(meta.homba) <- c('id', 'lat', 'lon', 'start', 'end')
+
+wi <- which(flist.hclim %in% flist.hom%in%flist.homba )
+flist.hclim[-wi] #????
+length(flist.hclim[-wi])
+f=1
+
+for(f in 1:length(flist.homba)) {
+  
+  ifile.homba <- paste0(input.homba,'/',flist.homba[f])
+  meta.homba[f,1:3] <- read_meta(ifile.homba)[c(2,4,5)]
+  
+  x <- read.csv(ifile.homba, quote = "", skip=12, sep="\t", header=TRUE)
+  print(paste0("Reading: ", f))
+  meta.homba[f,4] <- x$Year[1]
+  meta.homba[f,5] <- x$Year[nrow(x)]
+}
+head(meta.homba)
+any(is.na(meta.homba$start))
+any(is.na(meta.homba$end))
+
+##################
+## reading in the Data used in Pha
+input.hompha = 'C:/Users/elinl/Documents/Hclim/Pha_Hom'
+#input.hom = '/scratch2/peter/elin/hom/'
+flist.hompha <- list.files(input.hompha, pattern='.tsv')
+head(flist.hompha)
+length(flist.hompha)
+
+meta.hompha <- data.frame(matrix(NA,1,5))
+colnames(meta.hompha) <- c('id', 'lat', 'lon', 'start', 'end')
+
+wi <- which(flist.hclim %in% flist.hom%in%flist.homba%in%flist.hompha )
+flist.hclim[-wi]
+length(flist.hclim[-wi])
+f=1
+
+
+for(f in 1:length(flist.hompha)) {
+  
+  ifile.hompha <- paste0(input.hompha,'/',flist.hompha[f])
+  meta.hompha[f,1:3] <- read_meta(ifile.hompha)[c(2,4,5)]
+  
+  x <- read.csv(ifile.hompha, quote = "", skip=12, sep="\t", header=TRUE)
+  print(paste0("Reading: ", f))
+  meta.hompha[f,4] <- x$Year[1]
+  meta.hompha[f,5] <- x$Year[nrow(x)]
+}
+head(meta.hompha)
+any(is.na(meta.hompha$start))
+any(is.na(meta.hompha$end))
+
+tmp1 <- data.frame(table(meta.hclim$start))
+tmp2 <- data.frame(table(meta.hom$start))
+tmp3 <- data.frame(table(meta.homba$start))
+tmp4 <- data.frame(table(meta.hompha$start))
+#tmp4 <- rbind(tmp1,tmp2,tmp3)
+#tmp5 <- aggregate(tmp4,by=list(tmp4$Var1),FUN=sum)
+tmp4 <- data.frame(merge(tmp1,tmp2, by= 'Var1', all=T))
+tmp5 <- data.frame(merge(tmp4,tmp3, by= 'Var1', all=T))
+str(tmp3)
+tmp4$Var1 <- as.numeric(as.character(tmp3$Var1))
+df.hh <- tmp4[order(tmp3$Var1),]
+colnames(df.hh) <- c('start', 'hclim', 'hom')
+
+
+head(meta.hclim)
+
+cnt.rec.hclim <- list()
+cnt.rec.hom <- list()
+cnt.rec.homba <- list()
+cnt.rec.hompha <- list()
+
+a=1
+for(a in 1:nrow(meta.hclim)){
+  # list all years between start and end of the series, assume there are no missing years
+  cnt.rec.hclim[[a]] <- meta.hclim[a,'start']:meta.hclim[a,'end'] 
+}
+
+b=1
+for(b in 1:nrow(meta.hom)){
+  # list all years between start and end of the series, assume there are no missing years
+  cnt.rec.hom[[b]] <- meta.hom[b,'start']:meta.hom[b,'end']
+}
+c=1
+for(c in 1:nrow(meta.homba)){
+  # list all years between start and end of the series, assume there are no missing years
+  print(c)
+  cnt.rec.homba[[c]] <- meta.homba[c,'start']:meta.homba[c,'end'] 
+}
+d=1
+for(d in 1:nrow(meta.hompha)){
+  # list all years between start and end of the series, assume there are no missing years
+  print(d)
+  cnt.rec.hompha[[d]] <- meta.hompha[d,'start']:meta.hompha[d,'end'] 
+}
+
+
+rec.yrs <- data.frame(table(unlist(cnt.rec.hclim)))
+rec.yrs.hom <- data.frame(table(unlist(cnt.rec.hom)))
+rec.yrs.homba <- data.frame(table(unlist(cnt.rec.homba)))
+rec.yrs.hompha <- data.frame(table(unlist(cnt.rec.hompha)))
+# get log scaling
+rec.yrs$log <- log(rec.yrs$Freq)
+rec.yrs.hom$log <- log(rec.yrs.hom$Freq)
+rec.yrs.homba$log <- log(rec.yrs.homba$Freq)
+rec.yrs.hompha$log <- log(rec.yrs.hompha$Freq)
+# make x axis a time series
+rec.yrs$date <- as.Date(rec.yrs[,'Var1'], format='%Y')
+rec.yrs.hom$date <- as.Date(rec.yrs.hom[,'Var1'], format='%Y')
+rec.yrs.homba$date <- as.Date(rec.yrs.homba[,'Var1'], format='%Y')
+rec.yrs.hompha$date <- as.Date(rec.yrs.hompha[,'Var1'], format='%Y')
+
+#png('h.climhom.png')
+plot(rec.yrs[,c('date','log')], type='l', col='#a6611a', xlab="Year", ylab="Number of records (log)", ylim=c(0,8))
+lines(rec.yrs.hom[,c('date','log')], type='l', col='#018571')
+lines(rec.yrs.homba[,c('date','log')], type='l', col='#dfc27d')
+lines(rec.yrs.hompha[,c('date','log')], type='l', col='#80cdc1')
+legend("topleft",legend=c("Hclim", "Climatol", "Bart", "Pha"),
+       fill=c('#a6611a', '#018571', '#dfc27d', '#80cdc1'))
+
+#dev.off()
+
+library(scales) # for transparency
+plot(rec.yrs[,c('date','log')], type='l', col=alpha('#a6611a',0.7), lwd=5, xlab='year', ylab='number of series',
+     yaxt='n')
+#ylim = c(1650,2030)
+lines(rec.yrs.hom[,'date'],rec.yrs.hom[,'log'] + log(1.03), col= alpha('#018571',0.7), lwd=2)
+# homba
+lines(rec.yrs.homba[,'date'],rec.yrs.homba[,'log'] - log(1.03), col= alpha('#dfc27d',0.7), lwd=2)
+# homphahttp://127.0.0.1:12479/graphics/plot_zoom_png?width=1004&height=309
+lines(rec.yrs.hompha[,'date'],rec.yrs.hompha[,'log'] - log(1.03), col= alpha('#80cdc1',0.7), lwd=2)
+
+# add labels y-axis
+abline(h=log(c(2,5,10,20,50,100,200,500,1000,2000)), col='lightgrey')
+mtext(c(2,5,10,20,50,100,200,500,1000,2000),side=2, at=log(c(2,5,10,20,50,100,200,500,1000,2000)),
+      las=2, line = 0.5)
+
+#legend("topleft",legend=c("Hclim","nHom_Climatol", "nHom_Bart", "nHom_Pha"),
+#       fill=c('red', 'blue', 'orange', 'green'))
+
+legend("bottomright", cex=0.8,legend=c("HCLIM","nHom_CLIMATOL", "nHom_BART", "nHom_PHA"),
+       fill=c("#a6611a","#018571", "#dfc27d","#80cdc1"))
+
